@@ -14,6 +14,7 @@ from triplet_image_loader import TripletImageLoader
 from tripletnet import CS_Tripletnet
 from visdom import Visdom
 import numpy as np
+
 import Resnet_18
 from csn import ConditionalSimNet
 
