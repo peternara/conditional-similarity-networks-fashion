@@ -23,8 +23,8 @@ drive.mount('/content/gdrive')
 
 # Training settings
 parser = argparse.ArgumentParser(description='PyTorch MNIST Example')
-parser.add_argument('--batch-size', type=int, default=256, metavar='N',
-                    help='input batch size for training (default: 64)')
+parser.add_argument('--batch-size', type=int, default=128, metavar='N',
+                    help='input batch size for training (default: 64) 256 ')
 parser.add_argument('--epochs', type=int, default=200, metavar='N',
                     help='number of epochs to train (default: 200)')
 parser.add_argument('--start_epoch', type=int, default=1, metavar='N',
@@ -70,9 +70,10 @@ best_acc = 0
 
 def main():
     global args, best_acc
-    args = parser.parse_args()
+    args      = parser.parse_args()
+
     args.cuda = not args.no_cuda and torch.cuda.is_available()
-    torch.manual_seed(args.seed)
+    torch.manual_seed(args.seed)    
     if args.cuda:
         torch.cuda.manual_seed(args.seed)
     if args.visdom:
@@ -89,6 +90,7 @@ def main():
         conditions = [0,1,2,3]
     
     kwargs = {'num_workers': 4, 'pin_memory': True} if args.cuda else {}
+
     train_loader = torch.utils.data.DataLoader(
         TripletImageLoader('data', 'ut-zap50k-images', 'filenames.json', 
             conditions, 'train', n_triplets=args.num_traintriplets,
@@ -100,6 +102,7 @@ def main():
                             normalize,
                     ])),
         batch_size=args.batch_size, shuffle=True, **kwargs)
+
     test_loader = torch.utils.data.DataLoader(
         TripletImageLoader('data', 'ut-zap50k-images', 'filenames.json', 
             conditions, 'test', n_triplets=160000,
@@ -110,6 +113,7 @@ def main():
                             normalize,
                     ])),
         batch_size=args.batch_size, shuffle=True, **kwargs)
+
     val_loader = torch.utils.data.DataLoader(
         TripletImageLoader('data', 'ut-zap50k-images', 'filenames.json', 
             conditions, 'val', n_triplets=80000,
@@ -121,12 +125,12 @@ def main():
                     ])),
         batch_size=args.batch_size, shuffle=True, **kwargs)
     
-    model = Resnet_18.resnet18(pretrained=True, embedding_size=args.dim_embed)
+    model     = Resnet_18.resnet18(pretrained=True, embedding_size=args.dim_embed)
     csn_model = ConditionalSimNet(model, n_conditions=len(conditions), 
         embedding_size=args.dim_embed, learnedmask=args.learned, prein=args.prein)
     global mask_var
     mask_var = csn_model.masks.weight
-    tnet = CS_Tripletnet(csn_model)
+    tnet     = CS_Tripletnet(csn_model)
     if args.cuda:
         tnet.cuda()
 
@@ -134,9 +138,9 @@ def main():
     if args.resume:
         if os.path.isfile(args.resume):
             print("=> loading checkpoint '{}'".format(args.resume))
-            checkpoint = torch.load(args.resume)
+            checkpoint       = torch.load(args.resume)
             args.start_epoch = checkpoint['epoch']
-            best_prec1 = checkpoint['best_prec1']
+            best_prec1       = checkpoint['best_prec1']
             tnet.load_state_dict(checkpoint['state_dict'])
             print("=> loaded checkpoint '{}' (epoch {})"
                     .format(args.resume, checkpoint['epoch']))
@@ -145,9 +149,19 @@ def main():
 
     cudnn.benchmark = True
 
-    criterion = torch.nn.MarginRankingLoss(margin = args.margin)
+    criterion  = torch.nn.MarginRankingLoss(margin = args.margin)
     parameters = filter(lambda p: p.requires_grad, tnet.parameters())
-    optimizer = optim.Adam(parameters, lr=args.lr)
+    optimizer  = optim.Adam(parameters, lr=args.lr)
+
+    print('=================================================================')
+    print('learned      : ', args.learned)
+    print('batch-size   : ', args.batch_size)
+    print('conditions   : ', args.conditions)
+    print('margin       : ', args.margin)
+    print('resume       : ', args.resume)
+    print('train_loader : ', len(train_loader))
+    print('test_loader  : ', len(test_loader))
+    print('val_loader   : ', len(val_loader))
 
     n_parameters = sum([p.data.nelement() for p in tnet.parameters()])
     print('  + Number of params: {}'.format(n_parameters))
@@ -159,13 +173,15 @@ def main():
     for epoch in range(args.start_epoch, args.epochs + 1):
         # update learning rate
         adjust_learning_rate(optimizer, epoch)
+
         # train for one epoch
         train(train_loader, tnet, criterion, optimizer, epoch)
+
         # evaluate on validation set
         acc = test(val_loader, tnet, criterion, epoch)
 
         # remember best acc and save checkpoint
-        is_best = acc > best_acc
+        is_best  = acc > best_acc
         best_acc = max(acc, best_acc)
         save_checkpoint({
             'epoch': epoch + 1,
@@ -174,9 +190,9 @@ def main():
         }, is_best)
 
 def train(train_loader, tnet, criterion, optimizer, epoch):
-    losses = AverageMeter()
-    accs = AverageMeter()
-    emb_norms = AverageMeter()
+    losses     = AverageMeter()
+    accs       = AverageMeter()
+    emb_norms  = AverageMeter()
     mask_norms = AverageMeter()
 
     # switch to train mode
@@ -188,6 +204,7 @@ def train(train_loader, tnet, criterion, optimizer, epoch):
 
         # compute output
         dista, distb, mask_norm, embed_norm, mask_embed_norm = tnet(data1, data2, data3, c)
+
         # 1 means, dista should be larger than distb
         target = torch.FloatTensor(dista.size()).fill_(1)
         if args.cuda:
@@ -195,9 +212,9 @@ def train(train_loader, tnet, criterion, optimizer, epoch):
         target = Variable(target)
         
         loss_triplet = criterion(dista, distb, target)
-        loss_embedd = embed_norm / np.sqrt(data1.size(0))
-        loss_mask = mask_norm / data1.size(0)
-        loss = loss_triplet + args.embed_loss * loss_embedd + args.mask_loss * loss_mask
+        loss_embedd  = embed_norm / np.sqrt(data1.size(0))
+        loss_mask    = mask_norm / data1.size(0)
+        loss         = loss_triplet + args.embed_loss * loss_embedd + args.mask_loss * loss_mask
 
         # measure accuracy and record loss
         acc = accuracy(dista, distb)
@@ -230,8 +247,8 @@ def train(train_loader, tnet, criterion, optimizer, epoch):
             plotter.plot_mask(torch.nn.functional.relu(mask_var).data.cpu().numpy().T, epoch)
 
 def test(test_loader, tnet, criterion, epoch):
-    losses = AverageMeter()
-    accs = AverageMeter()
+    losses  = AverageMeter()
+    accs    = AverageMeter()
     accs_cs = {}
     for condition in conditions:
         accs_cs[condition] = AverageMeter()
@@ -249,7 +266,7 @@ def test(test_loader, tnet, criterion, epoch):
         target = torch.FloatTensor(dista.size()).fill_(1)
         if args.cuda:
             target = target.cuda()
-        target = Variable(target)
+        target    = Variable(target)
         test_loss =  criterion(dista, distb, target).data.item()
 
         # measure accuracy and record loss

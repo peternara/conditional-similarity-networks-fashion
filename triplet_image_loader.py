@@ -30,7 +30,6 @@ class TripletImageLoader(torch.utils.data.Dataset):
         self.base_path    = base_path  
         self.filenamelist = []
 
-
         for line in open(os.path.join(self.root, 'csn_zappos_triplets', filenames_filename)):
             # Shoes/Oxfords/Bostonian/100627.72.jpg
             self.filenamelist.append(line.rstrip('\n'))
