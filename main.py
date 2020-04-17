@@ -17,6 +17,9 @@ import numpy as np
 import Resnet_18
 from csn import ConditionalSimNet
 
+from google.colab import drive
+drive.mount('/content/gdrive')
+
 # Training settings
 parser = argparse.ArgumentParser(description='PyTorch MNIST Example')
 parser.add_argument('--batch-size', type=int, default=256, metavar='N',
