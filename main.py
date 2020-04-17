@@ -18,12 +18,16 @@ import numpy as np
 import Resnet_18
 from csn import ConditionalSimNet
 
+
+import tensorboardcolab as tb
+from torch.utils.tensorboard import SummaryWriter
+
 from google.colab import drive
 drive.mount('/content/gdrive')
 
 # Training settings
 parser = argparse.ArgumentParser(description='PyTorch MNIST Example')
-parser.add_argument('--batch-size', type=int, default=128, metavar='N',
+parser.add_argument('--batch-size', type=int, default=64, metavar='N',
                     help='input batch size for training (default: 64) 256 ')
 parser.add_argument('--epochs', type=int, default=200, metavar='N',
                     help='number of epochs to train (default: 200)')
@@ -68,14 +72,19 @@ parser.set_defaults(visdom=False)
 
 best_acc = 0
 
+step = 0
+
 def main():
     global args, best_acc
     args      = parser.parse_args()
 
     args.cuda = not args.no_cuda and torch.cuda.is_available()
-    torch.manual_seed(args.seed)    
+    #torch.manual_seed(args.seed)    
     if args.cuda:
-        torch.cuda.manual_seed(args.seed)
+        #torch.cuda.manual_seed(args.seed)
+        device = torch.device("cuda:0")
+
+
     if args.visdom:
         global plotter 
         plotter = VisdomLinePlotter(env_name=args.name)
@@ -126,14 +135,17 @@ def main():
         batch_size=args.batch_size, shuffle=True, **kwargs)
     
     model     = Resnet_18.resnet18(pretrained=True, embedding_size=args.dim_embed)
+    model.to(device)
+
     csn_model = ConditionalSimNet(model, n_conditions=len(conditions), 
         embedding_size=args.dim_embed, learnedmask=args.learned, prein=args.prein)
+
     global mask_var
     mask_var = csn_model.masks.weight
     tnet     = CS_Tripletnet(csn_model)
     if args.cuda:
         tnet.cuda()
-
+        
     # optionally resume from a checkpoint
     if args.resume:
         if os.path.isfile(args.resume):
@@ -168,14 +180,17 @@ def main():
 
     if args.test:
         test_acc = test(test_loader, tnet, criterion, 1)
-        sys.exit()
-
+        sys.exit() 
+    
+    #tb = tb.TensorBoardColab()
+    tb = SummaryWriter() 
+    
     for epoch in range(args.start_epoch, args.epochs + 1):
         # update learning rate
         adjust_learning_rate(optimizer, epoch)
 
         # train for one epoch
-        train(train_loader, tnet, criterion, optimizer, epoch)
+        train(train_loader, tnet, criterion, optimizer, epoch, tb)
 
         # evaluate on validation set
         acc = test(val_loader, tnet, criterion, epoch)
@@ -189,11 +204,15 @@ def main():
             'best_prec1': best_acc,
         }, is_best)
 
-def train(train_loader, tnet, criterion, optimizer, epoch):
+    tb.close()   
+
+def train(train_loader, tnet, criterion, optimizer, epoch, tb):
     losses     = AverageMeter()
     accs       = AverageMeter()
     emb_norms  = AverageMeter()
     mask_norms = AverageMeter()
+
+    global step
 
     # switch to train mode
     tnet.train()
@@ -201,6 +220,9 @@ def train(train_loader, tnet, criterion, optimizer, epoch):
         if args.cuda:
             data1, data2, data3, c = data1.cuda(), data2.cuda(), data3.cuda(), c.cuda()
         data1, data2, data3, c = Variable(data1), Variable(data2), Variable(data3), Variable(c)
+        
+        # torch.Size([128, 3, 112, 112]) torch.Size([128, 3, 112, 112]) torch.Size([128, 3, 112, 112]) torch.Size([128])
+        # print(data1.shape, data2.shape, data3.shape, c.shape)
 
         # compute output
         dista, distb, mask_norm, embed_norm, mask_embed_norm = tnet(data1, data2, data3, c)
@@ -228,6 +250,8 @@ def train(train_loader, tnet, criterion, optimizer, epoch):
         loss.backward()
         optimizer.step()
 
+        tb.add_scalar("loss", losses.avg, step)
+
         if batch_idx % args.log_interval == 0:
             print('Train Epoch: {} [{}/{}]\t'
                   'Loss: {:.4f} ({:.4f}) \t'
@@ -236,6 +260,9 @@ def train(train_loader, tnet, criterion, optimizer, epoch):
                 epoch, batch_idx * len(data1), len(train_loader.dataset),
                 losses.val, losses.avg, 
                 100. * accs.val, 100. * accs.avg, emb_norms.val, emb_norms.avg))
+            tb.add_scalar("accs.val", accs.val, step)   
+            tb.add_scalar("accs.avg", accs.avg, step)
+        step+=1       
 
     # log avg values to visdom
     if args.visdom:

@@ -67,6 +67,7 @@ class TripletImageLoader(torch.utils.data.Dataset):
             img1 = self.loader(os.path.join(self.root, self.base_path, self.filenamelist[int(path1)]))
             img2 = self.loader(os.path.join(self.root, self.base_path, self.filenamelist[int(path2)]))
             img3 = self.loader(os.path.join(self.root, self.base_path, self.filenamelist[int(path3)]))
+            
             if self.transform is not None:
                 img1 = self.transform(img1)
                 img2 = self.transform(img2)
