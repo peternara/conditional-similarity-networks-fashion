@@ -41,7 +41,9 @@ class TripletImageLoader(torch.utils.data.Dataset):
             fnames = filenames['val']
         else:
             fnames = filenames['test']
-            
+
+        # 참고) self.filenamelist 순서와 triplets의 값(anchor, far, close)이 매핑된다.
+
         for condition in conditions:
             for line in open(os.path.join(self.root, 'csn_zappos_triplets', 'tripletlists', fnames[condition])):
                 triplets.append((line.split()[0], line.split()[1], line.split()[2], condition)) # anchor, far, close   
