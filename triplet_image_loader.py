@@ -26,13 +26,14 @@ class TripletImageLoader(torch.utils.data.Dataset):
                 similar to image c than it is to image b, e.g., 
                 0 2017 42 """
 
-        self.root = '/content/gdrive/My Drive/DataSet/Fashion/zap50k'
-        self.base_path = base_path  
+        self.root         = '/content/gdrive/My Drive/DataSet/Fashion/zap50k'
+        self.base_path    = base_path  
         self.filenamelist = []
 
 
         for line in open(os.path.join(self.root, 'csn_zappos_triplets', filenames_filename)):
             self.filenamelist.append(line.rstrip('\n'))
+
         triplets = []
         if split == 'train':
             fnames = filenames['train']
@@ -40,9 +41,11 @@ class TripletImageLoader(torch.utils.data.Dataset):
             fnames = filenames['val']
         else:
             fnames = filenames['test']
+            
         for condition in conditions:
             for line in open(os.path.join(self.root, 'csn_zappos_triplets', 'tripletlists', fnames[condition])):
                 triplets.append((line.split()[0], line.split()[1], line.split()[2], condition)) # anchor, far, close   
+
         # print(triplets[:100])   
         np.random.shuffle(triplets)
         # print(triplets[:100])  
