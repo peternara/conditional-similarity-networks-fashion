@@ -25,10 +25,13 @@ class TripletImageLoader(torch.utils.data.Dataset):
                 For a line of intergers 'a b c', a triplet is defined such that image a is more 
                 similar to image c than it is to image b, e.g., 
                 0 2017 42 """
-        self.root = root
+
+        self.root = '/content/gdrive/My Drive/DataSet/Fashion/zap50k'
         self.base_path = base_path  
         self.filenamelist = []
-        for line in open(os.path.join(self.root, filenames_filename)):
+
+
+        for line in open(os.path.join(self.root, 'csn_zappos_triplets', filenames_filename)):
             self.filenamelist.append(line.rstrip('\n'))
         triplets = []
         if split == 'train':
@@ -38,7 +41,7 @@ class TripletImageLoader(torch.utils.data.Dataset):
         else:
             fnames = filenames['test']
         for condition in conditions:
-            for line in open(os.path.join(self.root, 'tripletlists', fnames[condition])):
+            for line in open(os.path.join(self.root, 'csn_zappos_triplets', 'tripletlists', fnames[condition])):
                 triplets.append((line.split()[0], line.split()[1], line.split()[2], condition)) # anchor, far, close   
         # print(triplets[:100])   
         np.random.shuffle(triplets)
@@ -49,7 +52,10 @@ class TripletImageLoader(torch.utils.data.Dataset):
 
     def __getitem__(self, index):
         path1, path2, path3, c = self.triplets[index]
-        if os.path.exists(os.path.join(self.root, self.base_path, self.filenamelist[int(path1)])) and os.path.exists(os.path.join(self.root, self.base_path, self.filenamelist[int(path1)])) and os.path.exists(os.path.join(self.root, self.base_path, self.filenamelist[int(path1)])):
+        if os.path.exists(os.path.join(self.root, self.base_path, self.filenamelist[int(path1)])) and \
+           os.path.exists(os.path.join(self.root, self.base_path, self.filenamelist[int(path2)])) and \
+           os.path.exists(os.path.join(self.root, self.base_path, self.filenamelist[int(path3)])):
+           
             img1 = self.loader(os.path.join(self.root, self.base_path, self.filenamelist[int(path1)]))
             img2 = self.loader(os.path.join(self.root, self.base_path, self.filenamelist[int(path2)]))
             img3 = self.loader(os.path.join(self.root, self.base_path, self.filenamelist[int(path3)]))
