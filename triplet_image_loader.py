@@ -32,6 +32,7 @@ class TripletImageLoader(torch.utils.data.Dataset):
 
 
         for line in open(os.path.join(self.root, 'csn_zappos_triplets', filenames_filename)):
+            # Shoes/Oxfords/Bostonian/100627.72.jpg
             self.filenamelist.append(line.rstrip('\n'))
 
         triplets = []
@@ -51,12 +52,15 @@ class TripletImageLoader(torch.utils.data.Dataset):
         # print(triplets[:100])   
         np.random.shuffle(triplets)
         # print(triplets[:100])  
-        self.triplets = triplets[:int(n_triplets * 1.0 * len(conditions) / 4)]
+
+        self.triplets  = triplets[:int(n_triplets * 1.0 * len(conditions) / 4)]
         self.transform = transform
-        self.loader = loader
+        self.loader    = loader
 
     def __getitem__(self, index):
         path1, path2, path3, c = self.triplets[index]
+        # 참고) self.filenamelist 순서와 triplets의 값(anchor, far, close)이 매핑된다.
+        
         if os.path.exists(os.path.join(self.root, self.base_path, self.filenamelist[int(path1)])) and \
            os.path.exists(os.path.join(self.root, self.base_path, self.filenamelist[int(path2)])) and \
            os.path.exists(os.path.join(self.root, self.base_path, self.filenamelist[int(path3)])):
