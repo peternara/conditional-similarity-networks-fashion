@@ -252,6 +252,11 @@ def train(train_loader, tnet, criterion, optimizer, epoch, tb):
                       #  0.3326, 0.3111, 0.4075, 0.4273, 0.4425, 0.3362, 0.2934, 0.3503, 0.4526,
                       #  0.5191, 0.3576, 0.4157, 0.2716, 0.5081]
 
+        # MarginRankingLoss 
+        # dista > distb 이니 모두 1, 적다면 -1
+        # If :math:`y = 1` then it assumed the first input should be ranked higher, 
+        #           (have a larger value) than the second input, and vice-versa for :math:`y = -1`.
+        # \text{loss}(x, y) = \max(0, -y * (x1 - x2) + \text{margin})
         target = torch.FloatTensor(dista.size()).fill_(1)
         #print('target : ', target) # tensor([1., 1., 1., 1., 1., 1., 1., 1., 1., 1., 1., 1., 1., 1., 1., 1., 1., 1.,
                                    #              1., 1., 1., 1., 1., 1., 1., 1., 1., 1., 1., 1., 1., 1.]) 
