@@ -253,7 +253,8 @@ def train(train_loader, tnet, criterion, optimizer, epoch, tb):
                       #  0.5191, 0.3576, 0.4157, 0.2716, 0.5081]
 
         # MarginRankingLoss 
-        # dista > distb 이니 모두 1, 적다면 -1
+        # dista > distb 이니 모두 1인 케이스다
+        #     만약 ranking이 적다면 -1로 표시해주는 ,,,
         # If :math:`y = 1` then it assumed the first input should be ranked higher, 
         #           (have a larger value) than the second input, and vice-versa for :math:`y = -1`.
         # \text{loss}(x, y) = \max(0, -y * (x1 - x2) + \text{margin})
