@@ -58,8 +58,10 @@ class ConditionalSimNet(nn.Module):
         #print('mask : ', self.mask.shape) # [256, 64]
         
         if self.learnedmask:
-            self.mask = torch.nn.functional.relu(self.mask)
+            self.mask = torch.nn.functional.relu(self.mask)            
             #print('mask : ', self.mask.shape) # [256, 64]
+            
+        # init vecotr와 condidtion mask 는 그 크기가 같다. 그래서, element wise * 연산으로...    
         masked_embedding = embedded_x * self.mask
         #print('masked_embedding : ', masked_embedding.shape) # torch.Size([256, 64])
         
