@@ -23,12 +23,14 @@ class ConditionalSimNet(nn.Module):
             if prein:
                 # define masks 
                 self.masks = torch.nn.Embedding(n_conditions, embedding_size)
+
                 # initialize masks
                 mask_array = np.zeros([n_conditions, embedding_size])
                 mask_array.fill(0.1)
-                mask_len = int(embedding_size / n_conditions)
+                mask_len   = int(embedding_size / n_conditions)
                 for i in range(n_conditions):
                     mask_array[i, i*mask_len:(i+1)*mask_len] = 1
+
                 # no gradients for the masks
                 self.masks.weight = torch.nn.Parameter(torch.Tensor(mask_array), requires_grad=True)
             else:
@@ -41,11 +43,13 @@ class ConditionalSimNet(nn.Module):
         else:
             # define masks 
             self.masks = torch.nn.Embedding(n_conditions, embedding_size)
+
             # initialize masks
-            mask_array = np.zeros([n_conditions, embedding_size])
-            mask_len = int(embedding_size / n_conditions)
+            mask_array = np.zeros([n_conditions, embedding_size])            
+            mask_len   = int(embedding_size / n_conditions)
             for i in range(n_conditions):
                 mask_array[i, i*mask_len:(i+1)*mask_len] = 1
+
             # no gradients for the masks
             self.masks.weight = torch.nn.Parameter(torch.Tensor(mask_array), requires_grad=False)
 

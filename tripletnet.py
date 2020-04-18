@@ -5,7 +5,7 @@ import torch.nn.functional as F
 class CS_Tripletnet(nn.Module):
     def __init__(self, embeddingnet):
         super(CS_Tripletnet, self).__init__()
-        self.embeddingnet = embeddingnet
+        self.embeddingnet = embeddingnet # ConditionalSimNet의 instance
 
     def forward(self, x, y, z, c):
         """ x: Anchor image,

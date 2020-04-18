@@ -241,7 +241,12 @@ def train(train_loader, tnet, criterion, optimizer, epoch, tb):
         dista, distb, mask_norm, embed_norm, mask_embed_norm = tnet(data1, data2, data3, c)
 
         # 1 means, dista should be larger than distb
+        #print('dista : ', dista.size()) # [32] > batch size
         target = torch.FloatTensor(dista.size()).fill_(1)
+        #print('target : ', target) # tensor([1., 1., 1., 1., 1., 1., 1., 1., 1., 1., 1., 1., 1., 1., 1., 1., 1., 1.,
+                                   #              1., 1., 1., 1., 1., 1., 1., 1., 1., 1., 1., 1., 1., 1.]) 
+        #print('\t', target.shape) # [32] > batch size        
+
         if args.cuda:
             target = target.cuda()
         target = Variable(target)
@@ -270,7 +275,7 @@ def train(train_loader, tnet, criterion, optimizer, epoch, tb):
                   'Emb_Norm: {:.2f} ({:.2f})'.format(
                 epoch, batch_idx * len(data1), len(train_loader.dataset),
                 losses.val, losses.avg, 
-                100. * accs.val, 100. * accs.avg, emb_norms.val, emb_norms.avg))
+                100. * accs.val, 100. * accs.avg, emb_norms.val, emb_norms.avg))                
             #tb.add_scalar("accs.val", accs.val, step) 
             tb.add_scalar("loss", losses.avg, step)  
             tb.add_scalar("accs.avg", accs.avg, step)
@@ -358,6 +363,7 @@ class VisdomLinePlotter(object):
         self.viz = Visdom()
         self.env = env_name
         self.plots = {}
+
     def plot(self, var_name, split_name, x, y, env=None):
         if env is not None:
             print_env = env
