@@ -11,8 +11,13 @@ class ConditionalSimNet(nn.Module):
             prein: Boolean indicating whether masks are initialized in equally sized disjoint 
                 sections or random otherwise"""
         super(ConditionalSimNet, self).__init__()
-        self.learnedmask = learnedmask
+
+        self.learnedmask  = learnedmask
         self.embeddingnet = embeddingnet
+
+        print('=================================================================')
+        print('ConditionalSimNet : ', self.learnedmask, prein)        
+
         # create the mask
         if learnedmask:
             if prein:
@@ -27,8 +32,10 @@ class ConditionalSimNet(nn.Module):
                 # no gradients for the masks
                 self.masks.weight = torch.nn.Parameter(torch.Tensor(mask_array), requires_grad=True)
             else:
+                print('\tdefine masks with gradients')
                 # define masks with gradients
                 self.masks = torch.nn.Embedding(n_conditions, embedding_size)
+                print('\tself.masks : ' , self.masks) # Embedding(4, 64)
                 # initialize weights
                 self.masks.weight.data.normal_(0.9, 0.7) # 0.1, 0.005
         else:
@@ -41,10 +48,21 @@ class ConditionalSimNet(nn.Module):
                 mask_array[i, i*mask_len:(i+1)*mask_len] = 1
             # no gradients for the masks
             self.masks.weight = torch.nn.Parameter(torch.Tensor(mask_array), requires_grad=False)
+
     def forward(self, x, c):
-        embedded_x = self.embeddingnet(x)
-        self.mask = self.masks(c)
+      
+        #print('x : ', x.shape) # [256, 3, 112, 112]
+        embedded_x = self.embeddingnet(x) # [256, 64]
+        #print('embedded_x : ', embedded_x.shape)
+        self.mask = self.masks(c) # [256, 64]
+        #print('mask : ', self.mask.shape)
+        
         if self.learnedmask:
             self.mask = torch.nn.functional.relu(self.mask)
+            #print('mask : ', self.mask.shape) # [256, 64]
         masked_embedding = embedded_x * self.mask
+        #print('masked_embedding : ', masked_embedding.shape) # torch.Size([256, 64])
+        
         return masked_embedding, self.mask.norm(1), embedded_x.norm(2), masked_embedding.norm(2)
+
+

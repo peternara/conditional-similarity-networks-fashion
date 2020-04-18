@@ -27,7 +27,7 @@ drive.mount('/content/gdrive')
 
 # Training settings
 parser = argparse.ArgumentParser(description='PyTorch MNIST Example')
-parser.add_argument('--batch-size', type=int, default=256, metavar='N',
+parser.add_argument('--batch-size', type=int, default=32, metavar='N',
                     help='input batch size for training (default: 64) 256 ')
 parser.add_argument('--epochs', type=int, default=200, metavar='N',
                     help='number of epochs to train (default: 200)')
@@ -66,7 +66,7 @@ parser.add_argument('--visdom', dest='visdom', action='store_true',
 parser.add_argument('--conditions', nargs='*', type=int,
                     help='Set of similarity notions')
 parser.set_defaults(test=False)
-parser.set_defaults(learned=False)
+parser.set_defaults(learned=True) # False
 parser.set_defaults(prein=False)
 parser.set_defaults(visdom=False)
 
