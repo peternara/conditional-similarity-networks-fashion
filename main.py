@@ -27,7 +27,7 @@ drive.mount('/content/gdrive')
 
 # Training settings
 parser = argparse.ArgumentParser(description='PyTorch MNIST Example')
-parser.add_argument('--batch-size', type=int, default=64, metavar='N',
+parser.add_argument('--batch-size', type=int, default=256, metavar='N',
                     help='input batch size for training (default: 64) 256 ')
 parser.add_argument('--epochs', type=int, default=200, metavar='N',
                     help='number of epochs to train (default: 200)')
@@ -213,10 +213,23 @@ def train(train_loader, tnet, criterion, optimizer, epoch, tb):
     mask_norms = AverageMeter()
 
     global step
+    batch_iterator = iter(train_loader)
 
     # switch to train mode
     tnet.train()
-    for batch_idx, (data1, data2, data3, c) in enumerate(train_loader):
+    #for batch_idx, (data1, data2, data3, c) in enumerate(train_loader):
+    for batch_idx in range(len(train_loader.dataset)):      
+        try:
+            data = next(batch_iterator)
+        except StopIteration:
+            batch_iterator = iter(train_loader)
+            data           = next(batch_iterator)
+        except Exception as e:
+            print('Loading data exception:', e)  
+            continue
+
+        data1, data2, data3, c = data    
+
         if args.cuda:
             data1, data2, data3, c = data1.cuda(), data2.cuda(), data3.cuda(), c.cuda()
         data1, data2, data3, c = Variable(data1), Variable(data2), Variable(data3), Variable(c)
@@ -248,9 +261,7 @@ def train(train_loader, tnet, criterion, optimizer, epoch, tb):
         # compute gradient and do optimizer step
         optimizer.zero_grad()
         loss.backward()
-        optimizer.step()
-
-        tb.add_scalar("loss", losses.avg, step)
+        optimizer.step()        
 
         if batch_idx % args.log_interval == 0:
             print('Train Epoch: {} [{}/{}]\t'
@@ -260,9 +271,10 @@ def train(train_loader, tnet, criterion, optimizer, epoch, tb):
                 epoch, batch_idx * len(data1), len(train_loader.dataset),
                 losses.val, losses.avg, 
                 100. * accs.val, 100. * accs.avg, emb_norms.val, emb_norms.avg))
-            tb.add_scalar("accs.val", accs.val, step)   
+            #tb.add_scalar("accs.val", accs.val, step) 
+            tb.add_scalar("loss", losses.avg, step)  
             tb.add_scalar("accs.avg", accs.avg, step)
-        step+=1       
+            step+=1       
 
     # log avg values to visdom
     if args.visdom:
@@ -273,16 +285,31 @@ def train(train_loader, tnet, criterion, optimizer, epoch, tb):
         if epoch % 10 == 0:
             plotter.plot_mask(torch.nn.functional.relu(mask_var).data.cpu().numpy().T, epoch)
 
-def test(test_loader, tnet, criterion, epoch):
+def test(test_loader, tnet, criterion, epoch, tb):
     losses  = AverageMeter()
     accs    = AverageMeter()
     accs_cs = {}
     for condition in conditions:
         accs_cs[condition] = AverageMeter()
 
+    batch_iterator = iter(test_loader)    
+
     # switch to evaluation mode
     tnet.eval()
-    for batch_idx, (data1, data2, data3, c) in enumerate(test_loader):
+    #for batch_idx, (data1, data2, data3, c) in enumerate(test_loader):
+
+    for batch_idx in range(len(test_loader.dataset)):
+        try:
+            data = next(batch_iterator)
+        except StopIteration:
+            batch_iterator = iter(test_loader)
+            data           = next(batch_iterator)
+        except Exception as e:
+            print('Loading data exception:', e)  
+            continue
+
+        data1, data2, data3, c = data   
+
         if args.cuda:
             data1, data2, data3, c = data1.cuda(), data2.cuda(), data3.cuda(), c.cuda()
         data1, data2, data3, c = Variable(data1), Variable(data2), Variable(data3), Variable(c)
@@ -290,7 +317,7 @@ def test(test_loader, tnet, criterion, epoch):
 
         # compute output
         dista, distb, _, _, _ = tnet(data1, data2, data3, c)
-        target = torch.FloatTensor(dista.size()).fill_(1)
+        target                = torch.FloatTensor(dista.size()).fill_(1)
         if args.cuda:
             target = target.cuda()
         target    = Variable(target)
@@ -303,14 +330,16 @@ def test(test_loader, tnet, criterion, epoch):
             accs_cs[condition].update(accuracy_id(dista, distb, c_test, condition), data1.size(0))
         losses.update(test_loss, data1.size(0))      
 
-    print('\nTest set: Average loss: {:.4f}, Accuracy: {:.2f}%\n'.format(
-        losses.avg, 100. * accs.avg))
+    print('\nTest set: Average loss: {:.4f}, Accuracy: {:.2f}%\n'.format(losses.avg, 100. * accs.avg))
+    tb.add_scalar("test_acc", losses.avg, epoch) 
+
     if args.visdom:
         for condition in conditions:
             plotter.plot('accs', 'acc_{}'.format(condition), epoch, accs_cs[condition].avg)
         plotter.plot(args.name, args.name, epoch, accs.avg, env='overview')
         plotter.plot('acc', 'test', epoch, accs.avg)
         plotter.plot('loss', 'test', epoch, losses.avg)
+
     return accs.avg
 
 def save_checkpoint(state, is_best, filename='checkpoint.pth.tar'):
@@ -359,9 +388,9 @@ class AverageMeter(object):
         self.reset()
 
     def reset(self):
-        self.val = 0
-        self.avg = 0
-        self.sum = 0
+        self.val   = 0
+        self.avg   = 0
+        self.sum   = 0
         self.count = 0
 
     def update(self, val, n=1):
