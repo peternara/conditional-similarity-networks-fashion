@@ -89,8 +89,7 @@ def main():
         global plotter 
         plotter = VisdomLinePlotter(env_name=args.name)
     
-    normalize = transforms.Normalize(mean=[0.485, 0.456, 0.406],
-                                     std=[0.229, 0.224, 0.225])
+    normalize = transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])
 
     global conditions
     if args.conditions is not None:
@@ -178,22 +177,24 @@ def main():
     n_parameters = sum([p.data.nelement() for p in tnet.parameters()])
     print('  + Number of params: {}'.format(n_parameters))
 
-    if args.test:
-        test_acc = test(test_loader, tnet, criterion, 1)
-        sys.exit() 
-    
     #tb = tb.TensorBoardColab()
     tb = SummaryWriter() 
+
+    if args.test:
+        test_acc = test(test_loader, tnet, criterion, 1, tb)
+        sys.exit()   
     
     for epoch in range(args.start_epoch, args.epochs + 1):
         # update learning rate
         adjust_learning_rate(optimizer, epoch)
 
         # train for one epoch
+        print('train for one epoch')
         train(train_loader, tnet, criterion, optimizer, epoch, tb)
 
         # evaluate on validation set
-        acc = test(val_loader, tnet, criterion, epoch)
+        print('evaluate on validation set')
+        acc = test(val_loader, tnet, criterion, epoch, tb)
 
         # remember best acc and save checkpoint
         is_best  = acc > best_acc
@@ -217,6 +218,7 @@ def train(train_loader, tnet, criterion, optimizer, epoch, tb):
 
     # switch to train mode
     tnet.train()
+    
     #for batch_idx, (data1, data2, data3, c) in enumerate(train_loader):
     for batch_idx in range(len(train_loader.dataset)):      
         try:
@@ -295,7 +297,8 @@ def train(train_loader, tnet, criterion, optimizer, epoch, tb):
             #tb.add_scalar("accs.val", accs.val, step) 
             tb.add_scalar("loss", losses.avg, step)  
             tb.add_scalar("accs.avg", accs.avg, step)
-            step+=1       
+            step+=1   
+                
 
     # log avg values to visdom
     if args.visdom:
@@ -349,7 +352,14 @@ def test(test_loader, tnet, criterion, epoch, tb):
         accs.update(acc, data1.size(0))
         for condition in conditions:
             accs_cs[condition].update(accuracy_id(dista, distb, c_test, condition), data1.size(0))
-        losses.update(test_loss, data1.size(0))      
+        losses.update(test_loss, data1.size(0))   
+
+        print('Test Epoch: {} [{}/{}]\t'
+                  'Loss: {:.4f} ({:.4f}) \t'
+                  'Acc: {:.2f}% ({:.2f}%) '.format(
+                epoch, batch_idx * len(data1), len(test_loader.dataset),
+                losses.val, losses.avg,  
+                100. * accs.val, 100. * accs.avg))                  
 
     print('\nTest set: Average loss: {:.4f}, Accuracy: {:.2f}%\n'.format(losses.avg, 100. * accs.avg))
     tb.add_scalar("test_acc", losses.avg, epoch) 
@@ -365,13 +375,14 @@ def test(test_loader, tnet, criterion, epoch, tb):
 
 def save_checkpoint(state, is_best, filename='checkpoint.pth.tar'):
     """Saves checkpoint to disk"""
-    directory = "runs/%s/"%(args.name)
+    
+    directory = "/content/gdrive/My Drive/colab_mdoel/%s/"%(args.name)
     if not os.path.exists(directory):
         os.makedirs(directory)
     filename = directory + filename
     torch.save(state, filename)
     if is_best:
-        shutil.copyfile(filename, 'runs/%s/'%(args.name) + 'model_best.pth.tar')
+        shutil.copyfile(filename, '/content/gdrive/My Drive/colab_mdoel/%s/'%(args.name) + 'model_best.pth.tar')
 
 class VisdomLinePlotter(object):
     """Plots to Visdom"""
